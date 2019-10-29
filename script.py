@@ -12,6 +12,8 @@ from typing import Optional
 import requests
 
 
+SERIALIZED_OBJ = "serialized_obj"
+
 
 class AuthorisationException(Exception):
     """ All kind of problems related to authorisation or token generation """
@@ -78,6 +80,8 @@ class SpotifyConnector:
 
         1st step of authorization process.
         """
+        if not self.client_id or not self.client_secret:
+            raise AuthorisationException("CLIENT_ID or CLIENT_SECRET were not exported")
         redirect_url = input(
             (
                 "Log in and accept permissions then you'll be redirected "
@@ -127,19 +131,44 @@ class SpotifyConnector:
             self.API_TOKEN_URL,
             data={
                 "grant_type": "refresh_token",
-                "refresh_token": "",
+                "refresh_token": self.refresh_token,
                 "client_id": self.client_id,
                 "client_secret": self.client_secret,
             },
         )
+        if response.status_code == 200:
+            data_dict = response.json()
+            self.access_token = data_dict.get("access_token")
+            self.access_token_expires_in = data_dict.get("expires_in")
+            self.access_token_generated_time = datetime.datetime.now()
+        else:
+            raise AuthorisationException("Refreshing access token failed")
+
+    def initialize(self):
+        try:
+            self.generate_authorization_code()
+        except AttributeError:
+            print("Could not generate authorization code. Did you paste link?")
+        self.generate_access_and_refresh_tokens()
+
+
+def serialize_obj(obj):
+    with open(SERIALIZED_OBJ, mode="wb") as f:
+        pickle.dump(obj, f)
+
+
+def deserialize_obj():
+    with open(SERIALIZED_OBJ, mode="rb") as f:
+        obj = pickle.load(f)
+    return obj
 
 
 if __name__ == "__main__":
-    # TODO: work in progress
-    # 1. Does file with serialized connector exist
-    #   YES -> load file and check if token expired. Refresh token if needed.
-    #   NO -> Do whole authentication from begin.
-    connector = SpotifyConnector()
-    connector.generate_authorization_code()
-    connector.generate_access_and_refresh_tokens()
+    try:
+        connector = deserialize_obj()
+    except FileNotFoundError:
+        connector = SpotifyConnector()
+        connector.initialize()
+        serialize_obj(connector)
+
     print(connector)
