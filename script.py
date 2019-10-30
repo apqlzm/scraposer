@@ -40,7 +40,7 @@ class SpotifyConnector:
     refresh_token: str = ""
     access_token_generated_time: Optional[datetime.datetime] = None
     access_token_expires_in: int = 0
-    session: requests.Session = requests.Session()
+    session: requests.Session = requests.Session()  # TODO: this may be deleted?
     client_id: Optional[str] = os.environ.get("CLIENT_ID")
     client_secret: Optional[str] = os.environ.get("CLIENT_SECRET")
 
@@ -151,6 +151,35 @@ class SpotifyConnector:
             print("Could not generate authorization code. Did you paste link?")
         self.generate_access_and_refresh_tokens()
 
+    def get_access_token(self):
+        diff = datetime.datetime.now() - self.access_token_generated_time
+        if diff.seconds >= self.access_token_expires_in:
+            self.refresh_access_token()
+        return self.access_token
+
+
+class SpotifyTrack:
+    pass
+
+
+class SpotifyPlaylist:
+    pass
+
+
+def find_track(artist: str, track: str, connector: SpotifyConnector):
+    url = "https://api.spotify.com/v1/search"
+    session = connector.session
+    response = session.get(
+        url,
+        params={"q": f"artist:{artist} track:{track}", "type": "track"},
+        headers={
+            "Authorization": "Bearer {access_token}".format(
+                access_token=connector.get_access_token()
+            )
+        },
+    )
+    return response
+
 
 def serialize_obj(obj):
     with open(SERIALIZED_OBJ, mode="wb") as f:
@@ -171,4 +200,23 @@ if __name__ == "__main__":
         connector.initialize()
         serialize_obj(connector)
 
+    # TODO: real scrapping will come
+    extracted_tracks = [
+        ("Daria Zawiałow", "HEJ HEJ!"),
+        ("Król", "TE SMAKI I ZAPACHY"),
+        ("Rammstein", "RADIO"),
+        ("Dawid Podsiadło", "NAJNOWSZY KLIP"),
+        ("Muniek Staszczyk", "POLA"),
+        ("Lao Che", "UNITED COLORS OF ARMAGEDON (LIVE)"),
+    ]
+
+    for tr in extracted_tracks:
+        r = find_track(tr[0], tr[1], connector)
+        data_dict = r.json()
+        if data_dict["tracks"]["total"] == 1:
+            uri = data_dict["tracks"]["items"][0]["uri"]
+            print(f"{tr[0]} {tr[1]}: {uri}")
+        else: 
+            print(data_dict["tracks"]["total"])
     print(connector)
+
