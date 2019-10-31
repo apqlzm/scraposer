@@ -7,9 +7,11 @@ import os
 import pickle
 import re
 from dataclasses import dataclass
-from typing import Optional
+from typing import List, Optional
 
 import requests
+
+from scrappers.models import SpotifyTrack
 from scrappers import lp3_polish_radio
 
 SERIALIZED_OBJ = "serialized_obj"
@@ -40,7 +42,7 @@ class SpotifyConnector:
     refresh_token: str = ""
     access_token_generated_time: Optional[datetime.datetime] = None
     access_token_expires_in: int = 0
-    session: requests.Session = requests.Session()  # TODO: this may be deleted?
+    session: requests.Session = requests.Session()
     client_id: Optional[str] = os.environ.get("CLIENT_ID")
     client_secret: Optional[str] = os.environ.get("CLIENT_SECRET")
 
@@ -54,7 +56,7 @@ class SpotifyConnector:
         return cls._instance
 
     @property
-    def authorise_url(self):
+    def __authorise_url(self):
         return (
             "https://accounts.spotify.com/authorize?client_id={client_id}"
             "&response_type={response_type}"
@@ -75,7 +77,7 @@ class SpotifyConnector:
         authorization_code = match.group(1)
         return authorization_code
 
-    def generate_authorization_code(self):
+    def __generate_authorization_code(self):
         """ Generate authorization code and grand permissions to application. 
 
         1st step of authorization process.
@@ -87,13 +89,13 @@ class SpotifyConnector:
                 "Log in and accept permissions then you'll be redirected "
                 "to localhost url. Copy the address and pasted it here: "
                 "Follow authorisation url:\n {authorise_url} "
-            ).format(authorise_url=self.authorise_url)
+            ).format(authorise_url=self.__authorise_url)
         )
         self.authorization_code = self._extract_authorization_code_from_url(
             redirect_url
         )
 
-    def generate_access_and_refresh_tokens(self):
+    def __generate_access_and_refresh_tokens(self):
         """ Obtain access and refresh tokens.
 
         2nd step of authorisation process.
@@ -121,7 +123,7 @@ class SpotifyConnector:
         else:
             raise AuthorisationException("Generate access token failed")
 
-    def refresh_access_token(self):
+    def __refresh_access_token(self):
         """ Refresh access token when expired.
 
         3rd step and repeated every hour. Interval between every refresh is done
@@ -146,18 +148,16 @@ class SpotifyConnector:
 
     def initialize(self):
         try:
-            self.generate_authorization_code()
+            self.__generate_authorization_code()
         except AttributeError:
             print("Could not generate authorization code. Did you paste link?")
-        self.generate_access_and_refresh_tokens()
+        self.__generate_access_and_refresh_tokens()
 
     def get_access_token(self):
         diff = datetime.datetime.now() - self.access_token_generated_time
-        if diff.seconds >= self.access_token_expires_in:
-            self.refresh_access_token()
+        if diff >= datetime.timedelta(seconds=self.access_token_expires_in - 1):
+            self.__refresh_access_token()
         return self.access_token
-
-
 
 
 def find_track(artist: str, track: str, connector: SpotifyConnector):
@@ -173,6 +173,44 @@ def find_track(artist: str, track: str, connector: SpotifyConnector):
         },
     )
     return response
+
+
+def create_playlist(name: str, connector: SpotifyConnector):
+    url = "https://api.spotify.com/v1/users/{user_id}/playlists".format(
+        user_id="username"  # TODO: temporary
+    )
+    result = connector.session.post(
+        url,
+        headers={
+            "Authorization": "Bearer {access_token}".format(
+                access_token=connector.get_access_token()
+            )
+        },
+        json={"name": name, "public": False},
+    )
+    if result.status_code in (200, 201):
+        data_dict = result.json()
+        return data_dict["id"]
+
+
+def add_tracks_to_playlist(
+    playlist_id: str, tracks: List[SpotifyTrack], connector: SpotifyConnector
+):
+    url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
+
+    result = connector.session.post(
+        url,
+        headers={
+            "Authorization": "Bearer {access_token}".format(
+                access_token=connector.get_access_token()
+            )
+        },
+        json={"uris": [track.uri for track in tracks if track.uri]},
+    )
+
+    if result.status_code in (200, 201):
+        data_dict = result.json()
+        return data_dict["snapshot_id"]
 
 
 def serialize_obj(obj):
@@ -204,12 +242,19 @@ if __name__ == "__main__":
         total_found = data_dict["tracks"]["total"]
         if total_found == 1:
             uri = data_dict["tracks"]["items"][0]["uri"]
+            track.uri = uri
             print(f"{track.artist} {track.name}: {uri}")
         elif total_found > 1:
+            # TODO: is first item the best match?
             uri = data_dict["tracks"]["items"][0]["uri"]
+            track.uri = uri
             print(f"{track.artist} {track.name}: {uri}")
         else:
+            # TODO: ask user to modify artist or track name and search again
             print(f"Not found {track.artist}: {track.name}")
     print("-----------")
-    print(tracks)
-    print(connector)
+
+    playlist_id = create_playlist("lp3_1968", connector)
+
+    snapshot_id = add_tracks_to_playlist(playlist_id, tracks, connector)
+    print(snapshot_id)
