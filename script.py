@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 import requests
-
+from scrappers import lp3_polish_radio
 
 SERIALIZED_OBJ = "serialized_obj"
 
@@ -158,12 +158,6 @@ class SpotifyConnector:
         return self.access_token
 
 
-class SpotifyTrack:
-    pass
-
-
-class SpotifyPlaylist:
-    pass
 
 
 def find_track(artist: str, track: str, connector: SpotifyConnector):
@@ -200,23 +194,22 @@ if __name__ == "__main__":
         connector.initialize()
         serialize_obj(connector)
 
-    # TODO: real scrapping will come
-    extracted_tracks = [
-        ("Daria Zawiałow", "HEJ HEJ!"),
-        ("Król", "TE SMAKI I ZAPACHY"),
-        ("Rammstein", "RADIO"),
-        ("Dawid Podsiadło", "NAJNOWSZY KLIP"),
-        ("Muniek Staszczyk", "POLA"),
-        ("Lao Che", "UNITED COLORS OF ARMAGEDON (LIVE)"),
-    ]
+    tracks = lp3_polish_radio.tracks(
+        "http://lp3.polskieradio.pl/notowania/?rok=2019&numer=1968"
+    )
 
-    for tr in extracted_tracks:
-        r = find_track(tr[0], tr[1], connector)
-        data_dict = r.json()
-        if data_dict["tracks"]["total"] == 1:
+    for track in tracks:
+        res = find_track(track.artist, track.name, connector)
+        data_dict = res.json()
+        total_found = data_dict["tracks"]["total"]
+        if total_found == 1:
             uri = data_dict["tracks"]["items"][0]["uri"]
-            print(f"{tr[0]} {tr[1]}: {uri}")
-        else: 
-            print(data_dict["tracks"]["total"])
+            print(f"{track.artist} {track.name}: {uri}")
+        elif total_found > 1:
+            uri = data_dict["tracks"]["items"][0]["uri"]
+            print(f"{track.artist} {track.name}: {uri}")
+        else:
+            print(f"Not found {track.artist}: {track.name}")
+    print("-----------")
+    print(tracks)
     print(connector)
-
