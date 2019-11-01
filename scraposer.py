@@ -11,8 +11,8 @@ from typing import List, Optional
 
 import requests
 
-from scrappers.models import SpotifyTrack
-from scrappers import lp3_polish_radio
+from scrapers.models import SpotifyTrack
+from scrapers import lp3_polish_radio
 
 SERIALIZED_OBJ = "serialized_obj"
 

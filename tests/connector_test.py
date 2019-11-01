@@ -1,4 +1,4 @@
-from script import SpotifyConnector
+from scraposer import SpotifyConnector
 
 
 def test_extract_authorization_code_from_url():

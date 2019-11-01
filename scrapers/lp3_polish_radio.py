@@ -1,7 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 
-from scrappers.models import SpotifyTrack
+from scrapers.models import SpotifyTrack
 
 
 def __download_html(url):
