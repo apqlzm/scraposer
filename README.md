@@ -11,6 +11,12 @@ Other websites may be added in future.
     <img src="https://apqlzm.github.io/theme/images/icons/create_playlist_lp3.svg">
 </p>
 
+Result of above command:
+
+<p align="left">
+    <img src="https://apqlzm.github.io/theme/images/icons/playlist-lp3.png">
+</p>
+
 ## How to use it
 
 ### First time use
