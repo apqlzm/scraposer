@@ -9,10 +9,11 @@ import re
 from dataclasses import dataclass
 from typing import List, Optional
 
+import click
 import requests
 
-from scrapers.models import SpotifyTrack
 from scrapers import lp3_polish_radio
+from scrapers.models import SpotifyTrack
 
 SERIALIZED_OBJ = "serialized_obj"
 
@@ -72,10 +73,12 @@ class SpotifyConnector:
         )
 
     @staticmethod
-    def _extract_authorization_code_from_url(url_with_code):
+    def _extract_authorization_code_from_url(url_with_code: str):
         match = re.search(r"code=(.*?)(&|$)", url_with_code)
-        authorization_code = match.group(1)
-        return authorization_code
+        if match:
+            authorization_code = match.group(1)
+            return authorization_code
+        raise AuthorisationException("Authorization code not found in url")
 
     def __generate_authorization_code(self):
         """ Generate authorization code and grand permissions to application. 
@@ -83,7 +86,10 @@ class SpotifyConnector:
         1st step of authorization process.
         """
         if not self.client_id or not self.client_secret:
-            raise AuthorisationException("CLIENT_ID or CLIENT_SECRET were not exported")
+            raise AuthorisationException(
+                "CLIENT_ID or CLIENT_SECRET were not in environment variable list. "
+                "Use `export` command to fix it"
+            )
         redirect_url = input(
             (
                 "Log in and accept permissions then you'll be redirected "
@@ -175,9 +181,9 @@ def find_track(artist: str, track: str, connector: SpotifyConnector):
     return response
 
 
-def create_playlist(name: str, connector: SpotifyConnector):
+def create_playlist(name: str, username: str, connector: SpotifyConnector):
     url = "https://api.spotify.com/v1/users/{user_id}/playlists".format(
-        user_id="username"  # TODO: temporary
+        user_id=f"{username}"
     )
     result = connector.session.post(
         url,
@@ -224,7 +230,17 @@ def deserialize_obj():
     return obj
 
 
-if __name__ == "__main__":
+@click.command()
+@click.option("--url", required=True, help="Url to website with list of songs")
+@click.option("--playlist", required=True, help="Name of playlist to be created")
+@click.option(
+    "--username",
+    required=True,
+    help="Username to Spotify account where the playlist will be created",
+)
+def main(url, playlist, username):
+    print(f"{url}, {playlist}, {username}")
+
     try:
         connector = deserialize_obj()
     except FileNotFoundError:
@@ -232,9 +248,7 @@ if __name__ == "__main__":
         connector.initialize()
         serialize_obj(connector)
 
-    tracks = lp3_polish_radio.tracks(
-        "http://lp3.polskieradio.pl/notowania/?rok=2019&numer=1968"
-    )
+    tracks = lp3_polish_radio.tracks(url)
 
     for track in tracks:
         res = find_track(track.artist, track.name, connector)
@@ -243,18 +257,24 @@ if __name__ == "__main__":
         if total_found == 1:
             uri = data_dict["tracks"]["items"][0]["uri"]
             track.uri = uri
-            print(f"{track.artist} {track.name}: {uri}")
+            click.echo(click.style(f"{track.artist} {track.name}: {uri}", fg="green"))
         elif total_found > 1:
             # TODO: is first item the best match?
             uri = data_dict["tracks"]["items"][0]["uri"]
             track.uri = uri
-            print(f"{track.artist} {track.name}: {uri}")
+            click.echo(
+                click.style(
+                    f"{track.artist} {track.name} [{total_found}]: {uri}", fg="green"
+                )
+            )
         else:
-            # TODO: ask user to modify artist or track name and search again
-            print(f"Not found {track.artist}: {track.name}")
-    print("-----------")
-
-    playlist_id = create_playlist("lp3_1968", connector)
-
+            # TODO: ask user to modify artist or track name and search again?
+            click.echo(click.style(f"Not found {track.artist} {track.name}", fg="red"))
+    click.echo("-----------")
+    playlist_id = create_playlist(playlist, username, connector)
     snapshot_id = add_tracks_to_playlist(playlist_id, tracks, connector)
-    print(snapshot_id)
+    click.echo(f"Success! playlist's snapshot id: {snapshot_id}")
+
+
+if __name__ == "__main__":
+    main()
