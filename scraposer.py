@@ -156,7 +156,9 @@ class SpotifyConnector:
         try:
             self.__generate_authorization_code()
         except AttributeError:
-            print("Could not generate authorization code. Did you paste link?")
+            raise AuthorisationException(
+                "Could not generate authorization code. Did you paste link?"
+            )
         self.__generate_access_and_refresh_tokens()
 
     def get_access_token(self):
@@ -239,8 +241,6 @@ def deserialize_obj():
     help="Username to Spotify account where the playlist will be created",
 )
 def main(url, playlist, username):
-    print(f"{url}, {playlist}, {username}")
-
     try:
         connector = deserialize_obj()
     except FileNotFoundError:
