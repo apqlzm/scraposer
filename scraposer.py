@@ -168,7 +168,9 @@ class SpotifyConnector:
         return self.access_token
 
 
-def find_track(artist: str, track: str, connector: SpotifyConnector):
+def find_track(
+    artist: str, track: str, connector: SpotifyConnector
+) -> requests.Response:
     url = "https://api.spotify.com/v1/search"
     session = connector.session
     response = session.get(
@@ -183,7 +185,9 @@ def find_track(artist: str, track: str, connector: SpotifyConnector):
     return response
 
 
-def create_playlist(name: str, username: str, connector: SpotifyConnector):
+def create_playlist(
+    name: str, username: str, connector: SpotifyConnector
+) -> Optional[str]:
     url = "https://api.spotify.com/v1/users/{user_id}/playlists".format(
         user_id=f"{username}"
     )
@@ -199,11 +203,12 @@ def create_playlist(name: str, username: str, connector: SpotifyConnector):
     if result.status_code in (200, 201):
         data_dict = result.json()
         return data_dict["id"]
+    return None
 
 
 def add_tracks_to_playlist(
     playlist_id: str, tracks: List[SpotifyTrack], connector: SpotifyConnector
-):
+) -> Optional[str]:
     url = f"https://api.spotify.com/v1/playlists/{playlist_id}/tracks"
 
     result = connector.session.post(
@@ -219,6 +224,21 @@ def add_tracks_to_playlist(
     if result.status_code in (200, 201):
         data_dict = result.json()
         return data_dict["snapshot_id"]
+    return None
+
+
+def split_up_list(the_list: list, group_len: int) -> List[list]:
+    output = []
+    left_idx = 0
+    right_idx = group_len
+    while True:
+        group = the_list[left_idx:right_idx]
+        if group:
+            output.append(group)
+        else:
+            return output
+        left_idx += group_len
+        right_idx += group_len
 
 
 def serialize_obj(obj):
@@ -253,6 +273,11 @@ def main(url, playlist, username):
 
     for track in tracks:
         res = find_track(track.artist, track.name, connector)
+        if res.status_code != 200:
+            click.echo(
+                click.style(f"Failed searching: {track.artist}, {track.name}", fg="red")
+            )
+            continue
         data_dict = res.json()
         total_found = data_dict["tracks"]["total"]
         if total_found == 1:
@@ -275,7 +300,14 @@ def main(url, playlist, username):
             )
     click.echo("-----------")
     playlist_id = create_playlist(playlist, username, connector)
-    snapshot_id = add_tracks_to_playlist(playlist_id, tracks, connector)
+
+    # It is allowed to add maximum 100 tracks to playlist per request
+    if len(tracks) <= 100:
+        snapshot_id = add_tracks_to_playlist(playlist_id, tracks, connector)
+    else:
+        for group in split_up_list(tracks, 100):
+            snapshot_id = add_tracks_to_playlist(playlist_id, group, connector)
+
     if snapshot_id:
         click.echo(f"Success! playlist's snapshot id: {snapshot_id}")
     else:
