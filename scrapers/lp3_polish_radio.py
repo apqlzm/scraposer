@@ -1,3 +1,7 @@
+"""
+Extract songs from http://lp3.polskieradio.pl/
+"""
+
 import requests
 from bs4 import BeautifulSoup
 

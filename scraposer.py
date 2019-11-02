@@ -12,7 +12,7 @@ from typing import List, Optional
 import click
 import requests
 
-from scrapers import lp3_polish_radio
+from scrapers.helpers import get_scraper
 from scrapers.models import SpotifyTrack
 
 SERIALIZED_OBJ = "serialized_obj"
@@ -248,7 +248,8 @@ def main(url, playlist, username):
         connector.initialize()
         serialize_obj(connector)
 
-    tracks = lp3_polish_radio.tracks(url)
+    scraper = get_scraper(url)
+    tracks = scraper.tracks(url)
 
     for track in tracks:
         res = find_track(track.artist, track.name, connector)
@@ -257,23 +258,28 @@ def main(url, playlist, username):
         if total_found == 1:
             uri = data_dict["tracks"]["items"][0]["uri"]
             track.uri = uri
-            click.echo(click.style(f"{track.artist} {track.name}: {uri}", fg="green"))
+            click.echo(click.style(f"{track.artist}, {track.name}: {uri}", fg="green"))
         elif total_found > 1:
             # TODO: is first item the best match?
             uri = data_dict["tracks"]["items"][0]["uri"]
             track.uri = uri
             click.echo(
                 click.style(
-                    f"{track.artist} {track.name} [{total_found}]: {uri}", fg="green"
+                    f"{track.artist}, {track.name} [{total_found}]: {uri}", fg="green"
                 )
             )
         else:
             # TODO: ask user to modify artist or track name and search again?
-            click.echo(click.style(f"Not found {track.artist} {track.name}", fg="red"))
+            click.echo(
+                click.style(f"Not found: {track.artist}, {track.name}", fg="red")
+            )
     click.echo("-----------")
     playlist_id = create_playlist(playlist, username, connector)
     snapshot_id = add_tracks_to_playlist(playlist_id, tracks, connector)
-    click.echo(f"Success! playlist's snapshot id: {snapshot_id}")
+    if snapshot_id:
+        click.echo(f"Success! playlist's snapshot id: {snapshot_id}")
+    else:
+        click.echo(f"Failed to create playlist")
 
 
 if __name__ == "__main__":
