@@ -2,6 +2,8 @@
 Extract songs from https://radiokampus.fm/playlista.php
 """
 
+import re
+
 import requests
 from bs4 import BeautifulSoup
 
@@ -24,7 +26,10 @@ def __prepare_list_of_tracks(html):
             artist = tds[1].b.text
             artist_track = tds[1].text
             track_name = artist_track.replace(artist, "")
-            track_name = track_name.strip()[1:].strip()
+            track_name = track_name.strip()[1:]
+            # sometimes there is a text in braces with feat. artists
+            # finding such tracks is impossible
+            track_name = re.sub(r"\(.*?\)", "", track_name).strip()
             tracks.append(SpotifyTrack(name=track_name, artist=artist))
     return tracks
 
