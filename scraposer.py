@@ -227,6 +227,16 @@ def add_tracks_to_playlist(
     return None
 
 
+def initialize_connector() -> SpotifyConnector:
+    try:
+        connector = deserialize_obj()
+    except FileNotFoundError:
+        connector = SpotifyConnector()
+        connector.initialize()
+        serialize_obj(connector)
+    return connector
+
+
 def split_up_list(the_list: list, group_len: int) -> List[list]:
     output = []
     left_idx = 0
@@ -239,6 +249,33 @@ def split_up_list(the_list: list, group_len: int) -> List[list]:
             return output
         left_idx += group_len
         right_idx += group_len
+
+
+def process_track(track: SpotifyTrack, connector: SpotifyConnector) -> None:
+    res = find_track(track.artist, track.name, connector)
+    if res.status_code != 200:
+        click.echo(
+            click.style(f"Failed searching: {track.artist}, {track.name}", fg="red")
+        )
+        return None
+    data_dict = res.json()
+    total_found = data_dict["tracks"]["total"]
+    if total_found == 1:
+        uri = data_dict["tracks"]["items"][0]["uri"]
+        track.uri = uri
+        click.echo(click.style(f"{track.artist}, {track.name}: {uri}", fg="green"))
+    elif total_found > 1:
+        # TODO: is first item the best match?
+        uri = data_dict["tracks"]["items"][0]["uri"]
+        track.uri = uri
+        click.echo(
+            click.style(
+                f"{track.artist}, {track.name} [{total_found}]: {uri}", fg="green"
+            )
+        )
+    else:
+        # TODO: ask user to modify artist or track name and search again?
+        click.echo(click.style(f"Not found: {track.artist}, {track.name}", fg="red"))
 
 
 def serialize_obj(obj):
@@ -261,43 +298,13 @@ def deserialize_obj():
     help="Username to Spotify account where the playlist will be created",
 )
 def main(url, playlist, username):
-    try:
-        connector = deserialize_obj()
-    except FileNotFoundError:
-        connector = SpotifyConnector()
-        connector.initialize()
-        serialize_obj(connector)
-
+    connector = initialize_connector()
     scraper = get_scraper(url)
     tracks = scraper.tracks(url)
 
     for track in tracks:
-        res = find_track(track.artist, track.name, connector)
-        if res.status_code != 200:
-            click.echo(
-                click.style(f"Failed searching: {track.artist}, {track.name}", fg="red")
-            )
-            continue
-        data_dict = res.json()
-        total_found = data_dict["tracks"]["total"]
-        if total_found == 1:
-            uri = data_dict["tracks"]["items"][0]["uri"]
-            track.uri = uri
-            click.echo(click.style(f"{track.artist}, {track.name}: {uri}", fg="green"))
-        elif total_found > 1:
-            # TODO: is first item the best match?
-            uri = data_dict["tracks"]["items"][0]["uri"]
-            track.uri = uri
-            click.echo(
-                click.style(
-                    f"{track.artist}, {track.name} [{total_found}]: {uri}", fg="green"
-                )
-            )
-        else:
-            # TODO: ask user to modify artist or track name and search again?
-            click.echo(
-                click.style(f"Not found: {track.artist}, {track.name}", fg="red")
-            )
+        process_track(track, connector)
+
     click.echo("-----------")
     playlist_id = create_playlist(playlist, username, connector)
 
