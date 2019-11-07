@@ -319,6 +319,7 @@ def main(url, playlist, username):
         click.echo(f"Success! playlist's snapshot id: {snapshot_id}")
     else:
         click.echo(f"Failed to create playlist")
+    serialize_obj(connector)
 
 
 if __name__ == "__main__":
