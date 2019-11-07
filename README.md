@@ -2,10 +2,6 @@
 
 Scrape list of tracks from a website and save it as playlist in your Spotify account.
 
-At the moment only [Lista Przebojów Trójki](http://lp3.polskieradio.pl/) and 
-[Radio Kampus playlist](https://radiokampus.fm/playlista.php) is supported.
-Other websites may be added in future.
-
 **Required Python 3.6+**
 
 <p align="left">
@@ -17,6 +13,12 @@ Result of above command:
 <p align="left">
     <img src="https://apqlzm.github.io/theme/images/icons/playlist-lp3.png">
 </p>
+
+## Supported websites
+
+- [Lista Przebojów Trójki](http://lp3.polskieradio.pl/)
+- [Radio Kampus playlists](https://radiokampus.fm/playlista.php)
+- [Program Alternatywny Trójki](https://www.polskieradio.pl/9/336)
 
 ## How to use it
 
