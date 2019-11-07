@@ -6,6 +6,7 @@ import datetime
 import os
 import pickle
 import re
+import time
 from dataclasses import dataclass
 from typing import List, Optional
 
@@ -230,7 +231,7 @@ def add_tracks_to_playlist(
 def initialize_connector() -> SpotifyConnector:
     try:
         connector = deserialize_obj()
-    except FileNotFoundError:
+    except (FileNotFoundError, EOFError):
         connector = SpotifyConnector()
         connector.initialize()
         serialize_obj(connector)
@@ -253,6 +254,10 @@ def split_up_list(the_list: list, group_len: int) -> List[list]:
 
 def process_track(track: SpotifyTrack, connector: SpotifyConnector) -> None:
     res = find_track(track.artist, track.name, connector)
+    if res.status_code == 429:
+        seconds = int(res.headers["Retry-After"]) + 1
+        time.sleep(seconds)
+        res = find_track(track.artist, track.name, connector)
     if res.status_code != 200:
         click.echo(
             click.style(f"Failed searching: {track.artist}, {track.name}", fg="red")
