@@ -1,8 +1,8 @@
-from scrapers import kampus_radio, lp3_polish_radio
+from scrapers import kampus_radio, lp3_polish_radio_3
 
 DOMAIN_SCAPER = {
     "radiokampus.fm": kampus_radio,
-    "lp3.polskieradio.pl": lp3_polish_radio,
+    "lp3.polskieradio.pl": lp3_polish_radio_3,
 }
 
 
