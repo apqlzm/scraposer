@@ -24,6 +24,7 @@ def __prepare_list_of_tracks(json_data):
     for song_data in json_data:
         artist = song_data["artist"]
         track_name = song_data["title"]
+        track_name = re.sub(r"\(feat.+\)", "", track_name)
         tracks.append(SpotifyTrack(name=track_name, artist=artist))
     return tracks
 
