@@ -16,9 +16,10 @@ Result of above command:
 
 ## Supported websites
 
-- [Lista Przebojów Trójki](http://lp3.polskieradio.pl/)
+- [Radiospacja Lista Przebojów](https://radiospacja.pl/chart/)
+- ~~[Lista Przebojów Trójki](http://lp3.polskieradio.pl/)~~
 - [Radio Kampus playlists](https://radiokampus.fm/playlista.php)
-- [Program Alternatywny Trójki](https://www.polskieradio.pl/9/336)
+- ~~[Program Alternatywny Trójki](https://www.polskieradio.pl/9/336)~~
 
 ## How to use it
 
