@@ -43,5 +43,5 @@ Your are ready to go.
 To create a playlist you need a lint to the website with list of tracks, you'll be also asked for name of the playlist and your Spotify username. Example usage:
 
 ```shell
-python scraposer.py --url "http://lp3.polskieradio.pl/notowania/?rok=2014&numer=1681" --playlist "some_name_whatever" --username "yournick"
+python scraposer.py --url "https://radiospacja.pl/chart/lista-przebojow-13/" --playlist "some_name_whatever" --username "yournick"
 ```
