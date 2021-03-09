@@ -25,9 +25,7 @@ Result of above command:
 
 ### First time use
 
-It's simple command line tool so there is no hosted website which would allow users to authorize to my Spotify application. So you need to use your own Spotify app.
-
-1. Register new application - [link to instruction](https://developer.spotify.com/documentation/general/guides/app-settings/#register-your-app). As Redirect URL please set "https://localhost"
+1. [Register new application](https://developer.spotify.com/documentation/general/guides/app-settings/#register-your-app). As Redirect URL please set "https://localhost"
 2. Export app's client id and client secret (replace hashes with the ones from your app):
 
 ```shell
@@ -40,7 +38,7 @@ Your are ready to go.
 
 ### Create your first playlist
 
-To create a playlist you need a lint to the website with list of tracks, you'll be also asked for name of the playlist and your Spotify username. Example usage:
+To create a playlist you need a `link to a website` with list of tracks (obviously), `name` of the playlist and your Spotify `username`. Example usage:
 
 ```shell
 python scraposer.py --url "https://radiospacja.pl/chart/lista-przebojow-13/" --playlist "some_name_whatever" --username "yournick"
